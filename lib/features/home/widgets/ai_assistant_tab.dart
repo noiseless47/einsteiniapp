@@ -661,8 +661,8 @@ What strategies have worked well for you in the ${_postTopicController.text.toLo
     
   // Removed duplicate keyboardVisible declaration
         bool isNewPost = true;
-        String _generatedRepost = '';
-        bool _isGeneratingRepost = false;
+        String generatedRepost = '';
+        bool isGeneratingRepost = false;
         final repostUrlController = TextEditingController();
         final repostToneController = TextEditingController(text: 'Professional');
         final repostLengthController = TextEditingController(text: 'Medium');
@@ -941,12 +941,12 @@ What strategies have worked well for you in the ${_postTopicController.text.toLo
                         SizedBox(
                           width: double.infinity,
                           child: ElevatedButton(
-                            onPressed: _isGeneratingRepost ? null : () async {
+                            onPressed: isGeneratingRepost ? null : () async {
                               if (repostUrlController.text.isEmpty) {
                                 ToastUtils.showErrorToast('Please enter the LinkedIn post URL');
                                 return;
                               }
-                              setState(() => _isGeneratingRepost = true);
+                              setState(() => isGeneratingRepost = true);
                               // api is already instantiated above
                               final repost = await api.createRepost(
                                 url: repostUrlController.text,
@@ -954,8 +954,8 @@ What strategies have worked well for you in the ${_postTopicController.text.toLo
                                 length: repostLengthController.text,
                               );
                               setState(() {
-                                _isGeneratingRepost = false;
-                                _generatedRepost = repost;
+                                isGeneratingRepost = false;
+                                generatedRepost = repost;
                               });
                               ToastUtils.showSuccessToast('Repost generated successfully');
                             },
@@ -965,7 +965,7 @@ What strategies have worked well for you in the ${_postTopicController.text.toLo
                                 borderRadius: BorderRadius.circular(12),
                               ),
                             ),
-                            child: _isGeneratingRepost
+                            child: isGeneratingRepost
                               ? const SizedBox(
                                   height: 20,
                                   width: 20,
@@ -974,7 +974,7 @@ What strategies have worked well for you in the ${_postTopicController.text.toLo
                               : const Text('Generate Repost'),
                           ),
                         ),
-                        if (_generatedRepost.isNotEmpty) ...[
+                        if (generatedRepost.isNotEmpty) ...[
                           const SizedBox(height: 24),
                           Card(
                             elevation: 2,
@@ -1010,7 +1010,7 @@ What strategies have worked well for you in the ${_postTopicController.text.toLo
                                   ),
                                   const SizedBox(height: 16),
                                   Text(
-                                    _generatedRepost,
+                                    generatedRepost,
                                     style: Theme.of(context).textTheme.bodyLarge,
                                   ),
                                   const SizedBox(height: 16),
@@ -1019,7 +1019,7 @@ What strategies have worked well for you in the ${_postTopicController.text.toLo
                                     children: [
                                       OutlinedButton.icon(
                                         onPressed: () {
-                                          Clipboard.setData(ClipboardData(text: _generatedRepost)).then((_) {
+                                          Clipboard.setData(ClipboardData(text: generatedRepost)).then((_) {
                                             ToastUtils.showSuccessToast('Repost copied to clipboard');
                                           });
                                         },
@@ -1051,7 +1051,7 @@ What strategies have worked well for you in the ${_postTopicController.text.toLo
                                   const SizedBox(height: 12),
                                   OutlinedButton.icon(
                                     onPressed: () async {
-                                      setState(() => _isGeneratingRepost = true);
+                                      setState(() => isGeneratingRepost = true);
                                       // api is already instantiated above
                                       final repost = await api.createRepost(
                                         url: repostUrlController.text,
@@ -1059,8 +1059,8 @@ What strategies have worked well for you in the ${_postTopicController.text.toLo
                                         length: repostLengthController.text,
                                       );
                                       setState(() {
-                                        _isGeneratingRepost = false;
-                                        _generatedRepost = repost;
+                                        isGeneratingRepost = false;
+                                        generatedRepost = repost;
                                       });
                                       ToastUtils.showSuccessToast('Repost generated successfully');
                                     },

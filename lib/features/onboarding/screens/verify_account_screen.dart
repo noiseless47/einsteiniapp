@@ -133,8 +133,8 @@ class _VerifyAccountScreenState extends State<VerifyAccountScreen> {
                 // Logo
                 Image.asset(
                   Theme.of(context).brightness == Brightness.dark
-                    ? 'assets/images/einsteini_white.png'
-                    : 'assets/images/einsteini_black.png',
+                    ? 'assets/images/einsteini_black.png'
+                    : 'assets/images/einsteini_white.png',
                   height: 60,
                   width: 60,
                   fit: BoxFit.contain,

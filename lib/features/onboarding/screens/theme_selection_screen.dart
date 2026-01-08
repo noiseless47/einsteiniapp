@@ -66,7 +66,7 @@ class _ThemeSelectionScreenState extends ConsumerState<ThemeSelectionScreen> {
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final logoImage = isDarkMode ? 'assets/images/einsteini_white.png' : 'assets/images/einsteini_black.png';
+    final logoImage = isDarkMode ? 'assets/images/einsteini_black.png' : 'assets/images/einsteini_white.png';
 
     return Scaffold(
       appBar: AppBar(

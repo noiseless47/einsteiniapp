@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/gestures.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -14,7 +13,6 @@ import 'package:flutter_appauth/flutter_appauth.dart';
 import 'package:jwt_decoder/jwt_decoder.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'package:url_launcher/url_launcher.dart';
 
 class AuthScreen extends StatefulWidget {
   final bool isSignUp;
@@ -254,8 +252,8 @@ class _AuthScreenState extends State<AuthScreen> {
                 // Logo and Title
                 Image.asset(
                   Theme.of(context).brightness == Brightness.dark
-                    ? 'assets/images/einsteini_white.png'
-                    : 'assets/images/einsteini_black.png',
+                    ? 'assets/images/einsteini_black.png'
+                    : 'assets/images/einsteini_white.png',
                   height: 50,
                   width: 50,
                   fit: BoxFit.contain,
