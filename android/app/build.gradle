@@ -11,6 +11,24 @@ if (keystorePropertiesFile.exists()) {
     keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
 }
 
+def localProperties = new Properties()
+def localPropertiesFile = rootProject.file('local.properties')
+if (localPropertiesFile.exists()) {
+    localPropertiesFile.withReader('UTF-8') { reader ->
+        localProperties.load(reader)
+    }
+}
+
+def flutterVersionCode = localProperties.getProperty('flutter.versionCode')
+if (flutterVersionCode == null) {
+    flutterVersionCode = '1'
+}
+
+def flutterVersionName = localProperties.getProperty('flutter.versionName')
+if (flutterVersionName == null) {
+    flutterVersionName = '1.0'
+}
+
 android {
     namespace = "com.einsteini.app"
     compileSdk = 36 // Updated to required SDK version
@@ -41,8 +59,8 @@ android {
         applicationId = "com.einsteini.app"
         minSdkVersion flutter.minSdkVersion // Ensure compatibility
         targetSdk = 36 // Updated to target API level 36 for Play Store requirement
-        versionCode = 23
-        versionName = "3.0.0"
+        versionCode = flutterVersionCode.toInteger()
+        versionName = flutterVersionName
         
         // Add this for flutter_appauth
         manifestPlaceholders += [
