@@ -358,24 +358,24 @@ class EinsteiniOverlayService : Service() {
                 return START_STICKY
             }
             
-            if (intent?.action == "PROCESS_LINKEDIN_URL") {
-                val linkedInUrl = intent.getStringExtra("linkedInUrl")
-                Log.d("EinsteiniOverlay", "Processing LinkedIn URL: $linkedInUrl, fromShare: $fromShare")
+            if (intent?.action == "PROCESS_SOCIAL_URL") {
+                val socialUrl = intent.getStringExtra("socialUrl")
+                Log.d("EinsteiniOverlay", "Processing social URL: $socialUrl, fromShare: $fromShare")
                 
-                if (!linkedInUrl.isNullOrEmpty()) {
-                    Log.d("EinsteiniOverlay", "About to show bubble for LinkedIn URL")
+                if (!socialUrl.isNullOrEmpty()) {
+                    Log.d("EinsteiniOverlay", "About to show bubble for social URL")
                     
                     // First show the bubble to ensure it's visible
                     showBubble()
                     
                     // Add a small delay to ensure bubble is shown before overlay
                     Handler(Looper.getMainLooper()).postDelayed({
-                        Log.d("EinsteiniOverlay", "About to show overlay window for LinkedIn URL")
+                        Log.d("EinsteiniOverlay", "About to show overlay window for social URL")
                         // Then show the overlay window (which will keep bubble visible)
                         showOverlayWindow()
                         
-                        // Process the LinkedIn URL and update the overlay content
-                        processLinkedInUrl(linkedInUrl)
+                        // Process the social URL and update the overlay content
+                        processSocialUrl(socialUrl)
                     }, 100) // Small delay to ensure bubble is rendered
                 }
                 
@@ -2449,15 +2449,15 @@ class EinsteiniOverlayService : Service() {
         }
     }
 
-    // Process LinkedIn URL and update the overlay content
-    private fun processLinkedInUrl(url: String) {
+    // Process social URL and update the overlay content
+    private fun processSocialUrl(url: String) {
         // Make sure we're on a background thread
         Thread {
             try {
-                Log.d("EinsteiniOverlay", "Starting to scrape LinkedIn URL: $url")
+                Log.d("EinsteiniOverlay", "Starting to scrape social URL: $url")
                 
-                // Call the backend API to scrape the LinkedIn post
-                val scrapedData = scrapeLinkedInPost(url)
+                // Call the backend API to scrape the post
+                val scrapedData = scrapePost(url)
                 
                 // Store the scraped data in the class variable
                 this.scrapedData = scrapedData
@@ -2474,12 +2474,12 @@ class EinsteiniOverlayService : Service() {
                     }
                 }
             } catch (e: Exception) {
-                Log.e("EinsteiniOverlay", "Error processing LinkedIn URL", e)
+                Log.e("EinsteiniOverlay", "Error processing social URL", e)
                 
                 // Update the UI with an error message
                 Handler(Looper.getMainLooper()).post {
                     try {
-                        showErrorInOverlay("Failed to process LinkedIn content: ${e.message}")
+                        showErrorInOverlay("Failed to process content: ${e.message}")
                         // Loading indicator removed
                     } catch (e: Exception) {
                         Log.e("EinsteiniOverlay", "Error showing error in overlay", e)
@@ -2503,14 +2503,23 @@ class EinsteiniOverlayService : Service() {
         }
     }
     
-    // Scrape LinkedIn post using the backend API (matches Flutter implementation)
-    private fun scrapeLinkedInPost(url: String): Map<String, Any> {
+    // Scrape social post using appropriate API based on platform
+    private fun scrapePost(url: String): Map<String, Any> {
         try {
-            Log.d("EinsteiniOverlay", "Scraping LinkedIn URL: $url")
+            Log.d("EinsteiniOverlay", "Scraping social URL: $url")
             
-            // Use the exact same endpoint and format as the Flutter app
+            // Detect platform - use oEmbed for X/Twitter, backend scrape for LinkedIn
+            val isTwitterUrl = url.contains("twitter.com") || url.contains("x.com")
             val encodedUrl = java.net.URLEncoder.encode(url, "UTF-8")
-            val apiUrl = "https://backend.einsteini.ai/scrape?url=$encodedUrl"
+            
+            val apiUrl = if (isTwitterUrl) {
+                // Use X's oEmbed API which works great for tweets
+                "https://publish.twitter.com/oembed?url=$encodedUrl"
+            } else {
+                // Use backend scrape for LinkedIn and other platforms
+                "https://backend.einsteini.ai/scrape?url=$encodedUrl"
+            }
+            Log.d("EinsteiniOverlay", "Using API: $apiUrl")
             
             // Make the HTTP request
             val connection = URL(apiUrl).openConnection() as HttpURLConnection
@@ -2536,9 +2545,9 @@ class EinsteiniOverlayService : Service() {
                 
                 reader.close()
                 val responseBody = response.toString()
-                Log.d("EinsteiniOverlay", "Scrape response: ${responseBody.take(100)}...")
+                Log.d("EinsteiniOverlay", "Scrape response FULL: $responseBody")
                 
-                // Process the scraped data similar to Flutter implementation
+                // Process the scraped data
                 var content = ""
                 var author = "Unknown author"
                 var date = "Unknown date"
@@ -2547,31 +2556,70 @@ class EinsteiniOverlayService : Service() {
                 val images = mutableListOf<String>()
                 val commentsList = mutableListOf<Map<String, String>>()
                 
+                // Detect platform for appropriate parsing
+                val isTwitterUrl = url.contains("twitter.com") || url.contains("x.com")
+                
                 try {
                     // Try to parse as JSON first
                     val jsonResponse = JSONObject(responseBody)
+                    val keys = jsonResponse.keys().asSequence().toList()
+                    Log.d("EinsteiniOverlay", "JSON keys: $keys")
                     
-                    if (jsonResponse.has("content")) {
-                        content = cleanContent(jsonResponse.getString("content"))
-                        author = jsonResponse.optString("author", "Unknown author")
-                        date = jsonResponse.optString("date", "Unknown date")
-                        likes = jsonResponse.optInt("likes", 0)
-                        comments = jsonResponse.optInt("comments", 0)
+                    when {
+                        isTwitterUrl && jsonResponse.has("html") -> {
+                            // Handle X/Twitter oEmbed response
+                            val html = jsonResponse.getString("html")
+                            // Extract tweet text from HTML - remove tags and decode entities
+                            val tweetText = html
+                                .replace(Regex("<blockquote[^>]*>"), "")
+                                .replace(Regex("</blockquote>"), "")
+                                .replace(Regex("<a[^>]*>"), "")
+                                .replace(Regex("</a>"), "")
+                                .replace(Regex("<p[^>]*>"), "")
+                                .replace(Regex("</p>"), " ")
+                                .replace(Regex("<br[^>]*>"), " ")
+                                .replace(Regex("<[^>]*>"), "")
+                                .replace("&mdash;", "—")
+                                .replace("&amp;", "&")
+                                .replace("&lt;", "<")
+                                .replace("&gt;", ">")
+                                .replace("&quot;", "\"")
+                                .replace("&#39;", "'")
+                                .replace(Regex("\\s+"), " ")
+                                .trim()
+                            
+                            content = tweetText
+                            author = jsonResponse.optString("author_name", "Unknown author")
+                            date = "Recent"
+                            
+                            Log.d("EinsteiniOverlay", "Extracted tweet from oEmbed - Author: $author, Content: ${content.take(100)}...")
+                        }
                         
-                        // Process images if available
-                        if (jsonResponse.has("images")) {
-                            val imagesArray = jsonResponse.getJSONArray("images")
-                            for (i in 0 until imagesArray.length()) {
-                                images.add(imagesArray.getString(i))
+                        jsonResponse.has("content") -> {
+                            // Fallback: backend scrape response format
+                            content = cleanContent(jsonResponse.getString("content"))
+                            author = jsonResponse.optString("author", "Unknown author")
+                            date = jsonResponse.optString("date", "Unknown date")
+                            likes = jsonResponse.optInt("likes", 0)
+                            comments = jsonResponse.optInt("comments", 0)
+                            
+                            // Process images if available
+                            if (jsonResponse.has("images")) {
+                                val imagesArray = jsonResponse.getJSONArray("images")
+                                for (i in 0 until imagesArray.length()) {
+                                    images.add(imagesArray.getString(i))
+                                }
                             }
                         }
-                    } else {
-                        // Treat the whole response as content - no custom extraction
-                        content = cleanContent(responseBody)
-                        author = "Unknown author"
-                        date = "Unknown date"
-                        likes = 0
-                        comments = 0
+                        
+                        else -> {
+                            // Treat the whole response as content - no custom extraction
+                            content = cleanContent(responseBody)
+                            author = "Unknown author"
+                            date = "Unknown date"
+                            likes = 0
+                            comments = 0
+                        }
                     }
                 } catch (e: Exception) {
                     // If JSON parsing fails, treat as string content - no custom extraction

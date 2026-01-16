@@ -544,8 +544,8 @@ class OverlayService {
     }
   }
 
-  /// Process a LinkedIn URL in the overlay
-  Future<bool> processLinkedInUrl(String url) async {
+  /// Process a social media URL (LinkedIn, X/Twitter) in the overlay
+  Future<bool> processSocialUrl(String url) async {
     if (!Platform.isAndroid) {
       return false;
     }
@@ -562,15 +562,19 @@ class OverlayService {
       }
       
       // Send the URL to the overlay service
-      final bool result = await _channel.invokeMethod('processLinkedInUrl', {
+      final bool result = await _channel.invokeMethod('processSocialUrl', {
         'url': url,
       });
       return result;
     } catch (e) {
-      debugPrint('Failed to process LinkedIn URL: $e');
+      debugPrint('Failed to process social URL: $e');
       return false;
     }
   }
+  
+  /// @deprecated Use [processSocialUrl] instead.
+  @Deprecated('Use processSocialUrl instead')
+  Future<bool> processLinkedInUrl(String url) => processSocialUrl(url);
   
   /// Translate content in the overlay
   Future<bool> translateContentInOverlay({

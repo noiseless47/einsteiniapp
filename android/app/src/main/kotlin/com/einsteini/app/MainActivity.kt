@@ -133,16 +133,16 @@ class MainActivity : FlutterActivity() {
                         result.success(false)
                     }
                 }
-                "processLinkedInUrl" -> {
+                "processSocialUrl" -> {
                     try {
                         val url = call.argument<String>("url")
                         if (url != null) {
-                            Log.d("MainActivity", "Processing LinkedIn URL: $url")
+                            Log.d("MainActivity", "Processing social URL: $url")
                             
                             if (checkOverlayPermission()) {
                                 val intent = Intent(this, EinsteiniOverlayService::class.java)
-                                intent.action = "PROCESS_LINKEDIN_URL"
-                                intent.putExtra("linkedInUrl", url)
+                                intent.action = "PROCESS_SOCIAL_URL"
+                                intent.putExtra("socialUrl", url)
                                 intent.putExtra("isDarkMode", isDarkModeEnabled())
                                 
                                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -152,14 +152,14 @@ class MainActivity : FlutterActivity() {
                                 }
                                 result.success(true)
                             } else {
-                                Log.d("MainActivity", "Cannot process LinkedIn URL - overlay permission not granted")
+                                Log.d("MainActivity", "Cannot process social URL - overlay permission not granted")
                                 result.success(false)
                             }
                         } else {
                             result.error("INVALID_ARGUMENT", "URL cannot be null", null)
                         }
                     } catch (e: Exception) {
-                        Log.e("MainActivity", "Error processing LinkedIn URL", e)
+                        Log.e("MainActivity", "Error processing social URL", e)
                         result.success(false)
                     }
                 }
@@ -183,9 +183,15 @@ class MainActivity : FlutterActivity() {
                     startActivity(intent)
                     result.success(true)
                 }
+                "shareToSocialPlatform" -> {
+                    val content = call.argument<String>("content") ?: ""
+                    val platform = call.argument<String>("platform") ?: "linkedin"
+                    shareToSocialPlatform(content, platform)
+                    result.success(true)
+                }
                 "shareToLinkedIn" -> {
                     val content = call.argument<String>("content") ?: ""
-                    shareToLinkedIn(content)
+                    shareToSocialPlatform(content, "linkedin")
                     result.success(true)
                 }
                 else -> {
@@ -235,14 +241,14 @@ class MainActivity : FlutterActivity() {
                     EinsteiniOverlayService.hideOverlay(this)
                     result.success(true)
                 }
-                "processLinkedInUrl" -> {
+                "processSocialUrl" -> {
                     try {
-                        val linkedInUrl = call.argument<String>("linkedInUrl")
-                        if (linkedInUrl != null) {
+                        val socialUrl = call.argument<String>("url")
+                        if (socialUrl != null) {
                             if (checkOverlayPermission()) {
                                 val intent = Intent(this, EinsteiniOverlayService::class.java)
-                                intent.action = "PROCESS_LINKEDIN_URL"
-                                intent.putExtra("linkedInUrl", linkedInUrl)
+                                intent.action = "PROCESS_SOCIAL_URL"
+                                intent.putExtra("socialUrl", socialUrl)
                                 intent.putExtra("isDarkMode", isDarkModeEnabled())
                                 
                                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -252,14 +258,14 @@ class MainActivity : FlutterActivity() {
                                 }
                                 result.success(true)
                             } else {
-                                Log.d("MainActivity", "Cannot process LinkedIn URL - overlay permission not granted")
+                                Log.d("MainActivity", "Cannot process social URL - overlay permission not granted")
                                 result.success(false)
                             }
                         } else {
                             result.error("INVALID_ARGUMENT", "URL cannot be null", null)
                         }
                     } catch (e: Exception) {
-                        Log.e("MainActivity", "Error processing LinkedIn URL", e)
+                        Log.e("MainActivity", "Error processing social URL", e)
                         result.success(false)
                     }
                 }
@@ -410,21 +416,21 @@ class MainActivity : FlutterActivity() {
     private fun processSharedText(text: String) {
         Log.d("MainActivity", "Processing shared text: $text")
         
-        // Extract LinkedIn URL if present
-        val urlPattern = "(https?://([\\w-]+\\.)?linkedin\\.com/[^\\s]+)".toRegex()
+        // Extract social URL if present (LinkedIn, Twitter, or X)
+        val urlPattern = "(https?://([\\w-]+\\.)?(linkedin\\.com|twitter\\.com|x\\.com)/[^\\s]+)".toRegex()
         val matchResult = urlPattern.find(text)
         
         if (matchResult != null) {
-            val linkedInUrl = matchResult.value
-            Log.d("MainActivity", "Found LinkedIn URL: $linkedInUrl")
+            val socialUrl = matchResult.value
+            Log.d("MainActivity", "Found social URL: $socialUrl")
             
             // Check if overlay permission is granted
             if (checkOverlayPermission()) {
                 try {
-                    // Start overlay service with the LinkedIn URL immediately
+                    // Start overlay service with the social URL immediately
                     val serviceIntent = Intent(this, EinsteiniOverlayService::class.java)
-                    serviceIntent.action = "PROCESS_LINKEDIN_URL"
-                    serviceIntent.putExtra("linkedInUrl", linkedInUrl)
+                    serviceIntent.action = "PROCESS_SOCIAL_URL"
+                    serviceIntent.putExtra("socialUrl", socialUrl)
                     serviceIntent.putExtra("isDarkMode", isDarkModeEnabled())
                     serviceIntent.putExtra("fromShare", true) // Flag to indicate this is from sharing
                     
@@ -447,24 +453,49 @@ class MainActivity : FlutterActivity() {
                 openSystemSettings("android.settings.MANAGE_OVERLAY_PERMISSION")
             }
         } else {
-            Log.d("MainActivity", "No LinkedIn URL found in shared text")
-            Toast.makeText(this, "No LinkedIn URL found in shared content", Toast.LENGTH_SHORT).show()
+            Log.d("MainActivity", "No supported social URL found in shared text")
+            Toast.makeText(this, "No supported URL found in shared content", Toast.LENGTH_SHORT).show()
             finish()
         }
     }
 
-    private fun shareToLinkedIn(content: String) {
+    private fun shareToSocialPlatform(content: String, platform: String) {
         val intent = Intent(Intent.ACTION_SEND)
         intent.type = "text/plain"
-        intent.setPackage("com.linkedin.android")
         intent.putExtra(Intent.EXTRA_TEXT, content)
-        try {
-            startActivity(intent)
-        } catch (e: Exception) {
-            // Fallback: open LinkedIn web post creation
-            val webIntent = Intent(Intent.ACTION_VIEW)
-            webIntent.data = Uri.parse("https://www.linkedin.com/feed/?shareActive=true")
-            startActivity(webIntent)
+        
+        // Set package based on platform
+        when (platform.lowercase()) {
+            "linkedin" -> {
+                intent.setPackage("com.linkedin.android")
+                try {
+                    startActivity(intent)
+                } catch (e: Exception) {
+                    // Fallback: open LinkedIn web post creation
+                    val webIntent = Intent(Intent.ACTION_VIEW)
+                    webIntent.data = Uri.parse("https://www.linkedin.com/feed/?shareActive=true")
+                    startActivity(webIntent)
+                }
+            }
+            "twitter", "x" -> {
+                intent.setPackage("com.twitter.android")
+                try {
+                    startActivity(intent)
+                } catch (e: Exception) {
+                    // Fallback: open X/Twitter web
+                    val webIntent = Intent(Intent.ACTION_VIEW)
+                    webIntent.data = Uri.parse("https://twitter.com/intent/tweet?text=${Uri.encode(content)}")
+                    startActivity(webIntent)
+                }
+            }
+            else -> {
+                // Generic share for other platforms
+                try {
+                    startActivity(Intent.createChooser(intent, "Share to..."))
+                } catch (e: Exception) {
+                    Log.e("MainActivity", "Error sharing content", e)
+                }
+            }
         }
     }
 }

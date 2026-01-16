@@ -18,13 +18,14 @@ class OverlayShareActivity : Activity() {
         if (Intent.ACTION_SEND == action && type == "text/plain") {
             val sharedText = intent.getStringExtra(Intent.EXTRA_TEXT)
             if (sharedText != null) {
-                val urlPattern = "(https?://([\\w-]+\\.)?linkedin\\.com/[^\\s]+)".toRegex()
+                // Support LinkedIn, Twitter, and X URLs
+                val urlPattern = "(https?://([\\w-]+\\.)?(linkedin\\.com|twitter\\.com|x\\.com)/[^\\s]+)".toRegex()
                 val matchResult = urlPattern.find(sharedText)
                 if (matchResult != null) {
-                    val linkedInUrl = matchResult.value
+                    val socialUrl = matchResult.value
                     val serviceIntent = Intent(this, EinsteiniOverlayService::class.java)
-                    serviceIntent.action = "PROCESS_LINKEDIN_URL"
-                    serviceIntent.putExtra("linkedInUrl", linkedInUrl)
+                    serviceIntent.action = "PROCESS_SOCIAL_URL"
+                    serviceIntent.putExtra("socialUrl", socialUrl)
                     serviceIntent.putExtra("fromShare", true)
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                         startForegroundService(serviceIntent)
@@ -32,7 +33,7 @@ class OverlayShareActivity : Activity() {
                         startService(serviceIntent)
                     }
                 } else {
-                    Toast.makeText(this, "No LinkedIn URL found in shared content", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, "No supported URL found in shared content", Toast.LENGTH_SHORT).show()
                 }
             }
         }

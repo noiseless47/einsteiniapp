@@ -2,11 +2,27 @@ import 'dart:io';
 import 'package:flutter/services.dart';
 import 'package:einsteiniapp/core/services/api_service.dart';
 import 'package:permission_handler/permission_handler.dart';
+// ignore: deprecated_member_use_from_same_package
 import 'package:einsteiniapp/core/services/linkedin_service.dart';
 
 /// Utility class to handle platform-specific operations
 class PlatformChannel {
+  /// Share content to a social platform using Android intent
+  static Future<void> shareToSocialPlatform(String content, {String platform = 'linkedin'}) async {
+    try {
+      await _platformChannel.invokeMethod('shareToSocialPlatform', {
+        'content': content,
+        'platform': platform,
+      });
+    } on PlatformException catch (e) {
+      print('Failed to share to social platform: ${e.message}');
+      rethrow;
+    }
+  }
+
+  /// @deprecated Use [shareToSocialPlatform] instead.
   /// Share content to LinkedIn using Android intent
+  @Deprecated('Use shareToSocialPlatform instead')
   static Future<void> shareToLinkedIn(String content) async {
     try {
       await _platformChannel.invokeMethod('shareToLinkedIn', {'content': content});
@@ -19,6 +35,7 @@ class PlatformChannel {
   static const MethodChannel _overlayChannel = MethodChannel('com.einsteini.ai/overlay');
   static const MethodChannel _platformChannel = MethodChannel('einsteini/platform');
   static final ApiService _apiService = ApiService();
+  // ignore: deprecated_member_use_from_same_package
   static final LinkedInService _linkedInService = LinkedInService();
   
   // Callback for when content is scraped from the overlay
